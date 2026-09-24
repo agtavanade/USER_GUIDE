@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll ADP Integration — Value Mapping (Proposed Approach)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 2rem; color: #333; line-height: 1.5; font-size: 14px; }
+        h1 { font-size: 1.6rem; border-bottom: 2px solid #0078d4; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.2rem; margin-top: 2rem; color: #0078d4; }
+        h3 { font-size: 1rem; margin-top: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.85rem; }
+        th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-weight: 600; }
+        td { border: 1px solid #ccc; padding: 6px 8px; }
+        code { background: #f4f4f4; padding: 1px 4px; font-size: 0.85rem; }
+        .note { background: #fff8e1; border: 1px solid #ffc107; padding: 0.75rem; margin: 0.75rem 0; font-size: 0.85rem; }
+        .important { background: #fce4ec; border: 1px solid #e53935; padding: 0.75rem; margin: 0.75rem 0; font-size: 0.85rem; }
+        .info { background: #e3f2fd; border: 1px solid #1976d2; padding: 0.75rem; margin: 0.75rem 0; font-size: 0.85rem; }
+        ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+        .tbc { color: #b71c1c; font-weight: bold; }
+        .confirmed { color: #2e7d32; }
+        @media print { body { font-size: 12px; } }
+    </style>
+</head>
+<body>
+
+<h1>Payroll ADP Integration — Value Mapping (Proposed Approach)</h1>
+<p><strong>Document:</strong> Proposal for how translatable values could be configured, for team review<br>
+<strong>Proposed navigation:</strong> Human Resources &gt; Compensation &gt; Payroll integration &gt; Payroll ADP value mapping<br>
+<strong>Status:</strong> Draft proposal — August 2026 — pending review and approval</p>
+
+<div class="info">This document describes a proposed design for handling the translatable and static values required by the integration. It is put forward for the team to review and is not yet approved. Adopting it would represent an addition to the original FDD scope.</div>
+
+<h2>1. Purpose</h2>
+<p>The proposed Value Mapping table would translate values between D365 and ADP Celergo. When the batch process extracts employee data, it would look up each configurable value in this table and send the configured Target value to ADP instead of the raw D365 value.</p>
+<p>The intent is to let the business define and update translations without code changes or redeployment, and to answer the open hardcode-versus-configurable question raised on 12 August.</p>
+
+<h2>2. Proposed Table Structure</h2>
+<table>
+    <tr><th>Column</th><th>Description</th></tr>
+    <tr><td><strong>Category</strong></td><td>Dropdown. Selects which group of values this row belongs to.</td></tr>
+    <tr><td><strong>Source value</strong></td><td>The value as D365 knows it, or a fixed technical key (see Section 4).</td></tr>
+    <tr><td><strong>Target value</strong></td><td>The value that will be sent to ADP. You define this based on ADP requirements.</td></tr>
+    <tr><td><strong>Description</strong></td><td>Optional. Free text for your own reference.</td></tr>
+</table>
+
+<h2>3. Two Proposed Types of Source Value</h2>
+<table>
+    <tr><th>Type</th><th>Source value</th><th>Target value</th><th>Applies to</th></tr>
+    <tr>
+        <td><strong>Fixed Key</strong></td>
+        <td>A predefined technical key. Type it exactly as documented (case-sensitive).</td>
+        <td>You define this based on what ADP requires.</td>
+        <td>Static Value, Funding Method, "FIXED_COMP"</td>
+    </tr>
+    <tr>
+        <td><strong>Lookup</strong></td>
+        <td>A value that exists in D365. The form provides a dropdown with available options.</td>
+        <td>You define this based on what ADP requires.</td>
+        <td>Gender, Marital Status, Type of Contract, FT/PT, Pay Element Code (plans), Termination Reason, Nationality</td>
+    </tr>
+</table>
+<div class="info">In both cases, the Target value would be the business's responsibility. The system would never generate it. You would enter what ADP expects to receive.</div>
+
+<h2>4. Proposed Configuration per Category</h2>
+
+<h3>4.1 Static Value (Fixed Key)</h3>
+<p>Constants that apply to all employees. The Source value would be a technical key, typed exactly as shown. The example Target values below are the ones already defined in the mapping spreadsheet.</p>
+<table>
+    <tr><th>Category</th><th>Source value (type exactly)</th><th>Target value (you define)</th><th>ADP field</th></tr>
+    <tr><td>Static Value</td><td><code>REMUNERATION_TYPE</code></td><td>e.g. <code>Salaried</code></td><td>TYPE OF REMUNERATION</td></tr>
+    <tr><td>Static Value</td><td><code>WORK_LOCATION</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>WORK LOCATION</td></tr>
+    <tr><td>Static Value</td><td><code>GEOGRAPHICAL_ZONE</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>GEOGRAPHICAL ZONE</td></tr>
+    <tr><td>Static Value</td><td><code>OCCUPATION_CODE</code></td><td>e.g. <code>1049</code></td><td>OCCUPATION CODE</td></tr>
+    <tr><td>Static Value</td><td><code>IDENT_TYPE_NATIONAL_ID</code></td><td>e.g. <code>DNI</code></td><td>Locates the National ID record</td></tr>
+    <tr><td>Static Value</td><td><code>IDENT_TYPE_SOCIAL_SECURITY</code></td><td>e.g. <code>CUIL</code></td><td>Locates the CUIL record</td></tr>
+</table>
+<div class="important">Under this approach, all 6 rows would need to exist before the first batch execution.</div>
+
+<h3>4.2 Funding Method (Fixed Key)</h3>
+<table>
+    <tr><th>Category</th><th>Source value</th><th>Target value</th><th>Status</th></tr>
+    <tr><td>Funding Method</td><td><code>DEFAULT</code></td><td><span class="tbc">Awaiting customer</span></td><td>Blocked</td></tr>
+</table>
+
+<h3>4.3 Gender (Lookup)</h3>
+<p>Source values are the D365 Gender enum names.</p>
+<table>
+    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><td><code>Male</code></td><td><code>Male</code></td></tr>
+    <tr><td><code>Female</code></td><td><code>Female</code></td></tr>
+    <tr><td><code>NonSpecific</code></td><td><em>(leave empty)</em></td></tr>
+</table>
+
+<h3>4.4 Marital Status (Lookup)</h3>
+<table>
+    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><td><code>Single</code></td><td><code>Single</code></td></tr>
+    <tr><td><code>Married</code></td><td><code>Married</code></td></tr>
+    <tr><td><code>Divorced</code></td><td><code>Divorced</code></td></tr>
+    <tr><td><code>Widowed</code></td><td><code>Widowed</code></td></tr>
+    <tr><td><code>CivilPartnership</code></td><td><code>Civil Union</code></td></tr>
+    <tr><td><code>RegisteredPartnership</code></td><td><code>Civil Union</code></td></tr>
+</table>
+
+<h3>4.5 Type of Contract (Lookup)</h3>
+<table>
+    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><td><code>Employee</code></td><td><code>Permanent</code></td></tr>
+    <tr><td><code>Contractor</code></td><td><code>Temporary with Fixed Term</code></td></tr>
+</table>
+
+<h3>4.6 Full Time / Part Time (Lookup)</h3>
+<p>Same source field as Type of Contract, different translation.</p>
+<table>
+    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><td><code>Employee</code></td><td><code>Full Time</code></td></tr>
+    <tr><td><code>Contractor</code></td><td><code>Part Time</code></td></tr>
+</table>
+
+<h3>4.7 Pay Element Code (Mixed: 1 Fixed Key + Lookup)</h3>
+<p>Maps compensation plans to ADP pay codes. The lookup shows all Variable Compensation Plans from D365.</p>
+<div class="important">Under this approach, only plans with a row in this table would be sent to ADP. Plans without a mapping would be excluded.</div>
+<table>
+    <tr><th>Source value</th><th>Type</th><th>Target value</th><th>Status</th></tr>
+    <tr><td><code>FIXED_COMP</code></td><td>Fixed Key</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>HirBonus01</code></td><td>Lookup</td><td><span class="confirmed">5061</span></td><td>Confirmed</td></tr>
+    <tr><td><code>LuSuAll01</code></td><td>Lookup</td><td><span class="confirmed">H10153</span></td><td>Confirmed</td></tr>
+    <tr><td><code>Referral01</code></td><td>Lookup</td><td><span class="confirmed">H10221</span></td><td>Confirmed</td></tr>
+    <tr><td><code>RetBonus01</code></td><td>Lookup</td><td><span class="confirmed">306</span></td><td>Confirmed</td></tr>
+    <tr><td><code>CIL-HGS</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>CIL-IHI</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>FamAll</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>HomeLeave</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>HousingAll</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+    <tr><td><code>RentAll</code></td><td>Lookup</td><td><span class="tbc">Awaiting ADP</span></td><td>Blocked</td></tr>
+</table>
+<div class="note">Rows could be created with empty Target values and filled in once ADP confirms the codes.</div>
+
+<h3>4.8 Termination Reason (Lookup)</h3>
+<p>The lookup shows termination-applicable reason codes from D365.</p>
+<table>
+    <tr><th>Source value</th><th>Target value</th><th>Status</th></tr>
+    <tr><td><em>Select from D365 reason codes</em></td><td><span class="tbc">All awaiting ADP</span></td><td>Blocked</td></tr>
+</table>
+
+<h3>4.9 Nationality (Lookup)</h3>
+<p>The lookup shows all countries from D365.</p>
+<table>
+    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><td><code>ARG</code></td><td><code>Argentine</code></td></tr>
+    <tr><td><em>Add as needed</em></td><td></td></tr>
+</table>
+
+<h2>5. How a Row Would Be Added or Modified</h2>
+<p>If the approach is adopted, maintaining a value would look like this:</p>
+<ol>
+    <li>Open the form (at the proposed navigation path above).</li>
+    <li>Click New.</li>
+    <li>Select the Category.</li>
+    <li>Enter or select the Source value.</li>
+    <li>Enter the Target value.</li>
+    <li>Save.</li>
+</ol>
+<p>Changes would apply on the next batch run automatically.</p>
+
+<h2>6. Notes and Assumptions</h2>
+<ul>
+    <li>The table would be per legal entity, so you would switch company for other entities.</li>
+    <li>If a row were missing, for most categories the D365 value would pass through unchanged. For Pay Element Codes, the plan would be excluded.</li>
+    <li>Target values shown as "e.g." are examples taken from the current design and mapping spreadsheet. Final values would need to be confirmed with ADP before entry.</li>
+    <li>This is a proposed approach for review. If approved, it would be an addition to the original FDD scope and would carry a revised estimate.</li>
+</ul>
+
+<hr style="margin-top: 2rem;">
+<p style="font-size: 0.8rem; color: #666;">PBI-12268 — Payroll Integration ADP — Proposed approach (draft) — August 2026</p>
+
+</body>
+</html>
