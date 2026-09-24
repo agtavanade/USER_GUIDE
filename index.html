@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payroll ADP Integration — Value Mapping User Guide</title>
+    <title>Payroll ADP Integration - Value Mapping Configuration Guide</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 2rem; color: #333; line-height: 1.5; font-size: 14px; }
         h1 { font-size: 1.6rem; border-bottom: 2px solid #0078d4; padding-bottom: 0.5rem; }
@@ -17,152 +17,145 @@
         .important { background: #fce4ec; border: 1px solid #e53935; padding: 0.75rem; margin: 0.75rem 0; font-size: 0.85rem; }
         .info { background: #e3f2fd; border: 1px solid #1976d2; padding: 0.75rem; margin: 0.75rem 0; font-size: 0.85rem; }
         .tbc { color: #b71c1c; font-weight: bold; }
-        .confirmed { color: #2e7d32; }
         .src { color: #666; font-size: 0.8rem; }
         ul, ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+        .chk td:first-child { width: 2.5rem; text-align: center; }
         @media print { body { font-size: 12px; } }
     </style>
 </head>
 <body>
 
-<h1>Payroll ADP Integration — Value Mapping User Guide</h1>
-<p><strong>Status:</strong> Implemented and deployed. Delivered in PR 295.<br>
+<h1>Payroll ADP Integration - Value Mapping Configuration Guide</h1>
+<p><strong>For:</strong> the functional team configuring the ADP payroll extract<br>
 <strong>Navigation:</strong> Human resources &gt; Compensation &gt; Payroll integration &gt; Payroll ADP value mapping<br>
-<strong>Scope:</strong> Per legal entity. Switch company to maintain another entity.<br>
+<strong>Scope:</strong> Per legal entity. Switch company to configure another entity.<br>
+<strong>Version:</strong> 24 September 2026</p>
 
-<div class="info">This guide describes what the feature actually does today. Where behaviour differs between categories, the difference is called out rather than generalised, because two categories behave in opposite ways when a row is missing (see Section 7).</div>
+<div class="info">This guide lists every value that has to be configured before the extract can produce a complete payload, exactly as it has to be typed, and what happens to the payload if a value is missing. Section 8 is a checklist you can work through before the first run.</div>
 
-<h2>1. Purpose</h2>
-<p>The Value Mapping table translates values between D365 and ADP Celergo. When the batch extracts employee data it looks up each configurable value in this table and sends the configured <strong>Target value</strong> to ADP instead of the raw D365 value.</p>
-<p>It also holds a number of fixed constants that the design specifies but that D365 has no field for. The business maintains all of them without code changes or redeployment.</p>
+<h2>1. What this table does</h2>
+<p>ADP Celergo expects its own values, which are not always the values D365 holds. The Value Mapping table is where you define that translation. Each time the extract runs, it reads this table and sends your <strong>Target value</strong> to ADP in place of the D365 value.</p>
+<p>It also holds a number of constants that apply to every employee and that D365 has no field for, such as the geographical zone.</p>
+<p>Changes take effect on the next run. Nothing needs to be deployed.</p>
 
-<h2>2. Table Structure</h2>
+<h2>2. The form</h2>
+<p>The grid has four columns, in this order:</p>
 <table>
-    <tr><th>Column</th><th>Description</th></tr>
-    <tr><td><strong>Category</strong></td><td>Dropdown. Selects which group of values the row belongs to. Eight categories exist.</td></tr>
-    <tr><td><strong>Source value</strong></td><td>The value as D365 knows it, or a fixed technical key (see Section 3).</td></tr>
-    <tr><td><strong>Target value</strong></td><td>The value sent to ADP. You define this from the ADP requirement.</td></tr>
-    <tr><td><strong>Description</strong></td><td>Optional. Free text for your own reference.</td></tr>
+    <tr><th>#</th><th>Column</th><th>What goes in it</th></tr>
+    <tr><td>1</td><td><strong>Category</strong></td><td>A dropdown. Choose which group of values the row belongs to. Eight categories exist, listed in Section 3.</td></tr>
+    <tr><td>2</td><td><strong>Description</strong></td><td>Optional. Free text, for your own reference. Never sent to ADP.</td></tr>
+    <tr><td>3</td><td><strong>Source value</strong></td><td>The value as D365 holds it, or a fixed key from this guide.</td></tr>
+    <tr><td>4</td><td><strong>Target value</strong></td><td>The value ADP receives. You define this from the ADP requirement.</td></tr>
 </table>
-<p class="src">Category and Source value together form the alternate key <code>CategorySourceIdx</code>, so the same source value cannot be entered twice within one category.</p>
+<p>The same Source value cannot be entered twice within one Category.</p>
 
-<h2>3. Two Types of Source Value</h2>
+<div class="important"><strong>Only two categories give you a dropdown in the Source value column: Pay Element Code and Termination Reason.</strong> For every other category you type the Source value by hand. It is case sensitive and there is no validation, so a typo does not raise an error, it simply produces an unmapped value. Section 7 explains what that costs you.</div>
+
+<h2>3. The eight categories</h2>
 <table>
-    <tr><th>Type</th><th>Source value</th><th>Applies to</th></tr>
-    <tr>
-        <td><strong>Fixed key</strong></td>
-        <td>A predefined technical key, read directly by the code. Type it exactly as documented, it is case sensitive.</td>
-        <td>Static Value (6 keys), Funding Method (<code>DEFAULT</code>), Pay Element Code (<code>FIXED_COMP</code>)</td>
-    </tr>
-    <tr>
-        <td><strong>Lookup</strong></td>
-        <td>A value that exists in D365. <strong>Only two categories offer a dropdown.</strong> The rest have to be typed exactly, see the warning below.</td>
-        <td>Pay Element Code (variable compensation types) and Termination Reason have a lookup. Gender, Marital Status, Type of Contract and Full Time / Part Time do not.</td>
-    </tr>
+    <tr><th>Category</th><th>Source value</th><th>What it feeds</th></tr>
+    <tr><td>Static Value</td><td>Six fixed keys, typed</td><td>Four country specific fields, plus two lookups into D365</td></tr>
+    <tr><td>Funding Method</td><td>One fixed key, typed</td><td>Bank record, funding method</td></tr>
+    <tr><td>Gender</td><td>Typed</td><td>Country specific field GENDER</td></tr>
+    <tr><td>Marital Status</td><td>Typed</td><td>Country specific field MARITAL STATUS</td></tr>
+    <tr><td>Type of Contract</td><td>Typed</td><td>Country specific field TYPE OF CONTRACT</td></tr>
+    <tr><td>Full Time / Part Time</td><td>Typed</td><td>Country specific field FULL TIME OR PART TIME</td></tr>
+    <tr><td>Pay Element Code</td><td>One fixed key, plus a dropdown</td><td>Payment records, base pay and variable compensation awards</td></tr>
+    <tr><td>Termination Reason</td><td>Dropdown</td><td>Country specific field TERMINATION REASON</td></tr>
 </table>
-<div class="info">In both cases the Target value is the business's responsibility. The system never generates it. Enter exactly what ADP expects to receive.</div>
+<p class="src">Nationality is not in this list and needs no configuration. It is sent automatically as the three character ISO country code, which is what ADP expects.</p>
 
-<div class="important"><strong>Only Pay Element Code and Termination Reason have a lookup on the form.</strong> For Gender, Marital Status, Type of Contract and Full Time / Part Time the Source value is free text, with no dropdown and no validation. It has to be typed exactly as D365 holds it, and it is case sensitive. A typo produces no error, it produces an unmapped value, which means an empty field (Section 7).</div>
+<h2>4. What to configure, category by category</h2>
 
-<h2>4. The Eight Categories</h2>
-<p>These are the only categories that exist. There is <strong>no Nationality category</strong>: nationality is sent straight through, because the D365 country region id is already the three character ISO code ADP expects.</p>
+<h3>4.1 Static Value</h3>
+<p>Six rows. Type each Source value exactly as shown below.</p>
 <table>
-    <tr><th>Category</th><th>Type</th><th>Where it is used in the payload</th></tr>
-    <tr><td>Static Value</td><td>Fixed key</td><td>Six CSPF fields and two identification lookups</td></tr>
-    <tr><td>Funding Method</td><td>Fixed key</td><td>BANK record, funding method</td></tr>
-    <tr><td>Gender</td><td>Typed, no lookup</td><td>CSPF <code>GENDER</code></td></tr>
-    <tr><td>Marital Status</td><td>Typed, no lookup</td><td>CSPF <code>MARITAL STATUS</code></td></tr>
-    <tr><td>Type of Contract</td><td>Typed, no lookup</td><td>CSPF <code>TYPE OF CONTRACT</code></td></tr>
-    <tr><td>Full Time / Part Time</td><td>Typed, no lookup</td><td>CSPF <code>FULL TIME OR PART TIME</code></td></tr>
-    <tr><td>Pay Element Code</td><td>Fixed key + lookup</td><td>PAYD records, base pay and variable compensation awards</td></tr>
-    <tr><td>Termination Reason</td><td>Lookup</td><td>CSPF <code>TERMINATION REASON</code></td></tr>
+    <tr><th>Source value (type exactly)</th><th>Target value</th><th>What it does</th></tr>
+    <tr><td><code>REMUNERATION_TYPE</code></td><td>e.g. <code>Salaried</code></td><td>Sent as TYPE OF REMUNERATION</td></tr>
+    <tr><td><code>WORK_LOCATION</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>Sent as WORK LOCATION</td></tr>
+    <tr><td><code>GEOGRAPHICAL_ZONE</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>Sent as GEOGRAPHICAL ZONE</td></tr>
+    <tr><td><code>OCCUPATION_CODE</code></td><td>e.g. <code>1049</code></td><td>Sent as OCCUPATION CODE</td></tr>
+    <tr><td><code>IDENT_TYPE_NATIONAL_ID</code></td><td>e.g. <code>DNI</code></td><td><strong>Not sent to ADP.</strong> Tells the extract which identification type on the worker holds the national ID</td></tr>
+    <tr><td><code>IDENT_TYPE_SOCIAL_SECURITY</code></td><td>e.g. <code>CUIL</code></td><td><strong>Not sent to ADP.</strong> Tells the extract which identification type holds the CUIL</td></tr>
 </table>
+<div class="note">The last two behave differently from the rest. Their Target value has to match an <strong>Identification type</strong> id in D365 exactly, not partially. And the worker's identification record itself has to be current: if it carries an issue date in the future or an expiry date in the past, the extract treats it as not applicable and the field goes out empty even though your mapping is correct.</div>
 
-<h2>5. Configuration per Category</h2>
-
-<h3>5.1 Static Value (fixed keys)</h3>
-<p>Constants applied to every employee. Type the Source value exactly as shown. The example Target values are those in the mapping spreadsheet.</p>
+<h3>4.2 Funding Method</h3>
+<p>One row.</p>
 <table>
-    <tr><th>Source value (type exactly)</th><th>Target value (you define)</th><th>Used for</th></tr>
-    <tr><td><code>REMUNERATION_TYPE</code></td><td>e.g. <code>Salaried</code></td><td>CSPF TYPE OF REMUNERATION</td></tr>
-    <tr><td><code>WORK_LOCATION</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>CSPF WORK LOCATION</td></tr>
-    <tr><td><code>GEOGRAPHICAL_ZONE</code></td><td>e.g. <code>Buenos Aires - Florencio Varela</code></td><td>CSPF GEOGRAPHICAL ZONE</td></tr>
-    <tr><td><code>OCCUPATION_CODE</code></td><td>e.g. <code>1049</code></td><td>CSPF OCCUPATION CODE</td></tr>
-    <tr><td><code>IDENT_TYPE_NATIONAL_ID</code></td><td>e.g. <code>DNI</code></td><td>Locates the National ID record on the worker</td></tr>
-    <tr><td><code>IDENT_TYPE_SOCIAL_SECURITY</code></td><td>e.g. <code>CUIL</code></td><td>Locates the CUIL record on the worker</td></tr>
-</table>
-<div class="important">The last two are different from the rest. Their Target value is not sent to ADP, it is used to <em>find</em> the right identification record in D365. If it does not match the identification type id configured in D365, the extract finds nothing and the field goes out empty.</div>
-
-<h3>5.2 Funding Method (fixed key)</h3>
-<table>
-    <tr><th>Source value</th><th>Target value</th><th>Status</th></tr>
-    <tr><td><code>DEFAULT</code></td><td><span class="tbc">Awaiting customer</span></td><td>Open</td></tr>
+    <tr><th>Source value (type exactly)</th><th>Target value</th></tr>
+    <tr><td><code>DEFAULT</code></td><td><span class="tbc">Pending confirmation from the customer</span></td></tr>
 </table>
 
-<h3>5.3 Gender (typed, no lookup)</h3>
-<p class="src">Source: the D365 <code>HcmPersonGender</code> enum symbol name, read from Personal details. Type it by hand, exactly as below.</p>
+<h3>4.3 Gender</h3>
+<p>One row per value in use. The Source value is the D365 internal gender value, typed by hand. These are the only four that exist:</p>
 <table>
-    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><th>Source value (type exactly)</th><th>Target value (example)</th></tr>
     <tr><td><code>Male</code></td><td><code>Male</code></td></tr>
     <tr><td><code>Female</code></td><td><code>Female</code></td></tr>
-    <tr><td><code>NonSpecific</code></td><td><em>(leave empty)</em></td></tr>
+    <tr><td><code>NonSpecific</code></td><td>as agreed with ADP</td></tr>
+    <tr><td><code>None</code></td><td>as agreed with ADP</td></tr>
 </table>
+<div class="note">These are the internal values, not the text shown on the employee form, and the two can differ depending on the user's language. Use the spelling in the table above.</div>
 
-<h3>5.4 Marital Status (typed, no lookup)</h3>
-<p class="src">Source: the D365 <code>HcmPersonMaritalStatus</code> enum symbol name, read from Personal details. Type it by hand, exactly as below.</p>
+<h3>4.4 Marital Status</h3>
+<p>One row per value in use. These are the only nine that exist:</p>
 <table>
-    <tr><th>Source value</th><th>Target value (example)</th></tr>
+    <tr><th>Source value (type exactly)</th><th>Target value (example)</th></tr>
     <tr><td><code>Single</code></td><td><code>Single</code></td></tr>
     <tr><td><code>Married</code></td><td><code>Married</code></td></tr>
     <tr><td><code>Divorced</code></td><td><code>Divorced</code></td></tr>
     <tr><td><code>Widowed</code></td><td><code>Widowed</code></td></tr>
-    <tr><td><code>CivilPartnership</code></td><td><code>Civil Union</code></td></tr>
-    <tr><td><code>RegisteredPartnership</code></td><td><code>Civil Union</code></td></tr>
+    <tr><td><code>Separated</code></td><td>as agreed with ADP</td></tr>
+    <tr><td><code>Cohabiting</code></td><td>as agreed with ADP</td></tr>
+    <tr><td><code>CivilPartnership</code></td><td>e.g. <code>Civil Union</code></td></tr>
+    <tr><td><code>RegisteredPartnership</code></td><td>e.g. <code>Civil Union</code></td></tr>
+    <tr><td><code>None</code></td><td>as agreed with ADP</td></tr>
 </table>
-<p class="src">Add a row for every value in use. The symbol names above are the enum element names, not the labels shown on the D365 form, and the two can differ by language.</p>
+<div class="note"><code>Separated</code> and <code>Cohabiting</code> are easy to overlook. If an employee has either and no row exists, ADP receives no marital status for them at all.</div>
 
-<h3>5.5 Type of Contract (typed, no lookup)</h3>
-<div class="note">The source is the <strong>Benefit employment type id</strong> on the worker's employment details, not the worker type. The worker type only distinguishes an employee from a contractor, which is too coarse to carry these values. Source values are therefore whatever benefit employment types are configured in D365, for example <code>Permanent</code> or <code>FixedTerm</code>.</div>
+<h3>4.5 Type of Contract</h3>
+<p>The Source value is the <strong>Benefit employment type</strong> id recorded on the employment, typed by hand. Whatever benefit employment types exist in D365 for Argentina, each needs a row.</p>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
-    <tr><td><em>Benefit employment type id from D365</em></td><td>e.g. <code>Permanent</code></td></tr>
-    <tr><td><em>Benefit employment type id from D365</em></td><td>e.g. <code>Temporary with Fixed Term</code></td></tr>
+    <tr><td>Benefit employment type id from D365</td><td>e.g. <code>Permanent</code></td></tr>
+    <tr><td>Benefit employment type id from D365</td><td>e.g. <code>Temporary with Fixed Term</code></td></tr>
 </table>
 
-<h3>5.6 Full Time / Part Time (typed, no lookup)</h3>
-<p>Same source field as Type of Contract, a different translation of the same value. A row is needed in <strong>both</strong> categories for each benefit employment type in use.</p>
+<h3>4.6 Full Time / Part Time</h3>
+<p>The same Source values as Type of Contract, translated differently. <strong>Each benefit employment type therefore needs two rows, one in each category.</strong></p>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
-    <tr><td><em>Benefit employment type id from D365</em></td><td>e.g. <code>Full Time</code></td></tr>
-    <tr><td><em>Benefit employment type id from D365</em></td><td>e.g. <code>Part Time</code></td></tr>
+    <tr><td>Benefit employment type id from D365</td><td>e.g. <code>Full Time</code></td></tr>
+    <tr><td>Benefit employment type id from D365</td><td>e.g. <code>Part Time</code></td></tr>
 </table>
 
-<h3>5.7 Pay Element Code (mixed)</h3>
-<p>Two different things live in this category and they behave in <strong>opposite</strong> ways.</p>
+<h3>4.7 Pay Element Code</h3>
+<p>This category covers two different things.</p>
 
-<p><strong>Base pay, the fixed key <code>FIXED_COMP</code>.</strong></p>
+<p><strong>Base pay.</strong> One row, typed.</p>
 <table>
-    <tr><th>Source value</th><th>Target value</th><th>If left empty</th></tr>
-    <tr><td><code>FIXED_COMP</code></td><td><span class="tbc">Awaiting ADP</span></td><td><strong>The PAYD record is still sent</strong>, carrying the real salary amount and no pay element code. The validator raises a warning and transmission continues.</td></tr>
+    <tr><th>Source value (type exactly)</th><th>Target value</th></tr>
+    <tr><td><code>FIXED_COMP</code></td><td><span class="tbc">Pending confirmation from ADP</span></td></tr>
 </table>
 
-<p><strong>Variable compensation awards, by type.</strong> The source value is the <strong>variable compensation type id</strong> on the award's plan, not the plan id. This one does have a lookup: it lists the variable compensation plans and returns the <code>TypeId</code>, showing the plan id and description alongside so you can tell which plan you are looking at.</p>
+<p><strong>Variable compensation awards.</strong> One row per variable compensation type in use. This is the one place with a real dropdown: it lists the variable compensation plans and shows the plan id and description so you can identify them, but what it stores is the plan's <strong>type</strong>. Several plans sharing a type therefore need only one row between them.</p>
 <table>
-    <tr><th>Source value</th><th>Target value</th><th>If left empty</th></tr>
-    <tr><td><em>Variable compensation type id from D365</em></td><td>e.g. <code>H10153</code></td><td><strong>The award is skipped entirely</strong>, no PAYD record is produced for it.</td></tr>
+    <tr><th>Source value</th><th>Target value</th></tr>
+    <tr><td>Select from the dropdown</td><td>The ADP pay element code, e.g. <code>H10153</code></td></tr>
 </table>
-<div class="important">A missing row here is silent. The award simply does not appear in the payload, with no warning. Every variable compensation type in use needs a row, or its awards are invisible to ADP.</div>
-<div class="note">Variable compensation <strong>enrolments</strong> are out of scope, confirmed with the functional team. The code exists but is not called, so enrolments never reach the payload regardless of what is configured here. Only <strong>awards</strong> are live.</div>
+<div class="important">An award whose type has no row here is <strong>left out of the payload entirely</strong>, with no message of any kind. Every variable compensation type in use needs a row, or those awards never reach ADP.</div>
+<p class="src">Variable compensation enrolments are out of scope for this integration. Only awards are sent.</p>
 
-<h3>5.8 Termination Reason (lookup)</h3>
-<p class="src">Source: the D365 reason code id on the employment's termination reason. The lookup lists reason codes and is filtered to those flagged as termination applicable, so a reason code that does not appear has that flag turned off in D365.</p>
+<h3>4.8 Termination Reason</h3>
+<p>One row per reason code in use. The dropdown lists D365 reason codes and shows only those flagged as applicable to termination, so a reason code that does not appear needs that flag set in D365 first.</p>
 <table>
-    <tr><th>Source value</th><th>Target value</th><th>Status</th></tr>
-    <tr><td><em>Select from D365 reason codes</em></td><td><span class="tbc">Awaiting ADP</span></td><td>Open</td></tr>
+    <tr><th>Source value</th><th>Target value</th></tr>
+    <tr><td>Select from the dropdown</td><td><span class="tbc">Pending confirmation from ADP</span></td></tr>
 </table>
 
-<h2>6. The Eight Rows Seeded Automatically</h2>
-<p>Opening the form for the first time in a legal entity creates the eight fixed-key rows with <strong>empty Target values</strong>. They exist so that nothing is forgotten, but an empty target is not a configured value.</p>
+<h2>5. The eight rows that appear on their own</h2>
+<p>The first time the form is opened in a legal entity, the eight fixed-key rows are created for you, with the Target value left blank:</p>
 <table>
     <tr><th>Category</th><th>Source value</th></tr>
     <tr><td>Static Value</td><td><code>REMUNERATION_TYPE</code></td></tr>
@@ -174,42 +167,68 @@
     <tr><td>Funding Method</td><td><code>DEFAULT</code></td></tr>
     <tr><td>Pay Element Code</td><td><code>FIXED_COMP</code></td></tr>
 </table>
-<div class="important">All eight must be filled in before the first run. The lookup rows for Gender, Marital Status, Type of Contract, Full Time / Part Time, Termination Reason and the variable compensation types are <strong>not</strong> seeded and have to be added by hand.</div>
+<div class="important">Two things to know about this.
+<ul>
+<li>A blank Target value is <strong>not</strong> a configured value. All eight still have to be filled in.</li>
+<li>They are only created while the table is <strong>completely empty</strong>. If the first thing you do in a new legal entity is add a Gender row, the eight will never appear and you will have to type them yourself. Open the form first, let the eight appear, then start adding your own rows.</li>
+</ul>
+</div>
+<p>Gender, Marital Status, Type of Contract, Full Time / Part Time, Termination Reason and the variable compensation types are never created for you.</p>
 
-<h2>7. What Happens When a Row Is Missing</h2>
-<div class="important">There is <strong>no passthrough</strong>. An unmapped source value returns empty, never the D365 value. This is deliberate: most categories are read by a fixed key defined in code, so passing the source value through would put the key itself, for example <code>WORK_LOCATION</code>, into the payload as if it were payroll data.</div>
+<h2>6. Which values are still pending</h2>
 <table>
-    <tr><th>Category</th><th>Result of a missing or empty row</th></tr>
-    <tr><td>Static Value, used for a CSPF field</td><td>Empty value, and <strong>a country specific field with no value produces no CSPF record at all</strong>. The field is silently absent from the payload.</td></tr>
-    <tr><td>Static Value, the two identification keys</td><td>The extract cannot find the identification record, so the CSPF field is empty and again produces no record.</td></tr>
-    <tr><td>Gender, Marital Status, Type of Contract, Full Time / Part Time, Termination Reason</td><td>Empty value, so no CSPF record for that field.</td></tr>
-    <tr><td>Funding Method</td><td>The BANK record is still sent with an empty funding method.</td></tr>
-    <tr><td>Pay Element Code, <code>FIXED_COMP</code></td><td>The PAYD record is still sent, with the amount and no code. Validator warning.</td></tr>
-    <tr><td>Pay Element Code, a variable compensation type</td><td>The award is skipped. No record, no warning.</td></tr>
+    <tr><th>Category</th><th>Row</th><th>Waiting on</th></tr>
+    <tr><td>Funding Method</td><td><code>DEFAULT</code></td><td>Customer</td></tr>
+    <tr><td>Pay Element Code</td><td><code>FIXED_COMP</code></td><td>ADP</td></tr>
+    <tr><td>Pay Element Code</td><td>Variable compensation types</td><td>ADP, per type</td></tr>
+    <tr><td>Termination Reason</td><td>All reason codes</td><td>ADP</td></tr>
 </table>
-<p>The practical consequence: <strong>a missing row fails silently</strong>. Nothing errors, the payload is simply smaller. Check the record counts after the first run rather than waiting for an error.</p>
+<p>The rows can be created now with the Target value blank and completed as the values are confirmed.</p>
 
-<h2>8. Adding or Changing a Row</h2>
+<h2>7. What happens if a value is missing</h2>
+<div class="important">An unmapped value never falls back to the D365 value. It produces an <strong>empty</strong> result, and an empty country specific field produces <strong>no record at all</strong>. The field does not arrive at ADP blank, it simply is not there.</div>
+<table>
+    <tr><th>What is missing</th><th>Effect on the payload</th></tr>
+    <tr><td>A Static Value row used for a country specific field</td><td>That field is absent for every employee</td></tr>
+    <tr><td>An identification type key, or the wrong value in it</td><td>The national ID or CUIL is absent for every employee</td></tr>
+    <tr><td>A Gender, Marital Status, Type of Contract or Full Time / Part Time row</td><td>That field is absent for the employees holding the unmapped value only</td></tr>
+    <tr><td>Funding Method</td><td>The bank record is still sent, with the funding method blank</td></tr>
+    <tr><td><code>FIXED_COMP</code></td><td>The payment record is still sent, with the salary amount and no pay element code</td></tr>
+    <tr><td>A variable compensation type</td><td>Those awards are left out of the payload entirely</td></tr>
+</table>
+<div class="note"><strong>Nothing above produces an error.</strong> The run completes and the payload is simply smaller. The way to catch it is to compare the record counts after the first run against what you expect, rather than waiting to be told.</div>
+<p class="src">Two related points that are not about this table but cause the same kind of silent gap: an employee with no bank account marked as remainder produces no bank record, and an employee with no primary postal address produces almost no address record.</p>
+
+<h2>8. Checklist before the first run</h2>
+<table class="chk">
+    <tr><th></th><th>Step</th></tr>
+    <tr><td>&#9744;</td><td>Confirm you are in the correct legal entity.</td></tr>
+    <tr><td>&#9744;</td><td>Open the form and confirm the eight fixed-key rows appeared.</td></tr>
+    <tr><td>&#9744;</td><td>Fill in the four Static Value rows that are sent to ADP: remuneration type, work location, geographical zone, occupation code.</td></tr>
+    <tr><td>&#9744;</td><td>Fill in the two identification type rows, and check the values match an Identification type id in D365 exactly.</td></tr>
+    <tr><td>&#9744;</td><td>Fill in Funding Method and <code>FIXED_COMP</code>, or record them as outstanding.</td></tr>
+    <tr><td>&#9744;</td><td>Add a Gender row for every value in use, spelled as in Section 4.3.</td></tr>
+    <tr><td>&#9744;</td><td>Add a Marital Status row for every value in use, including <code>Separated</code> and <code>Cohabiting</code> if applicable.</td></tr>
+    <tr><td>&#9744;</td><td>List the benefit employment types in use and add a row for each in <strong>both</strong> Type of Contract and Full Time / Part Time.</td></tr>
+    <tr><td>&#9744;</td><td>Add a Pay Element Code row for every variable compensation type in use.</td></tr>
+    <tr><td>&#9744;</td><td>Add a Termination Reason row for every reason code in use.</td></tr>
+    <tr><td>&#9744;</td><td>After the run, check the record counts per employee against what you expect.</td></tr>
+</table>
+
+<h2>9. Adding or changing a row</h2>
 <ol>
-    <li>Confirm you are in the correct legal entity.</li>
+    <li>Confirm the legal entity.</li>
     <li>Open Human resources &gt; Compensation &gt; Payroll integration &gt; Payroll ADP value mapping.</li>
     <li>Click New.</li>
-    <li>Select the Category.</li>
-    <li>Enter the Source value. Pay Element Code and Termination Reason offer a lookup. Everything else is typed by hand and is case sensitive.</li>
+    <li>Choose the Category.</li>
+    <li>Enter the Source value. Pay Element Code and Termination Reason offer a dropdown, everything else is typed and case sensitive.</li>
     <li>Enter the Target value.</li>
     <li>Save.</li>
 </ol>
-<p>Changes apply on the next batch run. No deployment is required.</p>
-
-<h2>9. Notes</h2>
-<ul>
-    <li>The table is per legal entity. Configuring one entity does nothing for another.</li>
-    <li>Target values shown as "e.g." come from the design and the mapping spreadsheet. Confirm the final values with ADP before entering them.</li>
-    <li>The value mapping table was added during the build. The design required translated values but defined no mechanism to hold them.</li>
-</ul>
+<p>The change applies on the next run.</p>
 
 <hr style="margin-top: 2rem;">
-<p style="font-size: 0.8rem; color: #666;">PBI-12268 — Payroll Integration ADP — Value mapping user guide — updated 24 September 2026 to match the delivered code</p>
+<p style="font-size: 0.8rem; color: #666;">PBI-12268 - Payroll Integration ADP - Value mapping configuration guide - 24 September 2026</p>
 
 </body>
 </html>
