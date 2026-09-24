@@ -26,9 +26,11 @@
 <body>
 
 <h1>Payroll ADP Integration — Value Mapping User Guide</h1>
+<p><strong>Status:</strong> Implemented and deployed. Delivered in PR 295.<br>
 <strong>Navigation:</strong> Human resources &gt; Compensation &gt; Payroll integration &gt; Payroll ADP value mapping<br>
 <strong>Scope:</strong> Per legal entity. Switch company to maintain another entity.<br>
-<div class="info">This guide describes what the feature does. Where behaviour differs between categories, the difference is called out rather than generalised, because two categories behave in opposite ways when a row is missing (see Section 7).</div>
+
+<div class="info">This guide describes what the feature actually does today. Where behaviour differs between categories, the difference is called out rather than generalised, because two categories behave in opposite ways when a row is missing (see Section 7).</div>
 
 <h2>1. Purpose</h2>
 <p>The Value Mapping table translates values between D365 and ADP Celergo. When the batch extracts employee data it looks up each configurable value in this table and sends the configured <strong>Target value</strong> to ADP instead of the raw D365 value.</p>
@@ -54,11 +56,13 @@
     </tr>
     <tr>
         <td><strong>Lookup</strong></td>
-        <td>A value that exists in D365. The form offers a dropdown of the available options.</td>
-        <td>Gender, Marital Status, Type of Contract, Full Time / Part Time, Termination Reason, Pay Element Code (variable compensation types)</td>
+        <td>A value that exists in D365. <strong>Only two categories offer a dropdown.</strong> The rest have to be typed exactly, see the warning below.</td>
+        <td>Pay Element Code (variable compensation types) and Termination Reason have a lookup. Gender, Marital Status, Type of Contract and Full Time / Part Time do not.</td>
     </tr>
 </table>
 <div class="info">In both cases the Target value is the business's responsibility. The system never generates it. Enter exactly what ADP expects to receive.</div>
+
+<div class="important"><strong>Only Pay Element Code and Termination Reason have a lookup on the form.</strong> For Gender, Marital Status, Type of Contract and Full Time / Part Time the Source value is free text, with no dropdown and no validation. It has to be typed exactly as D365 holds it, and it is case sensitive. A typo produces no error, it produces an unmapped value, which means an empty field (Section 7).</div>
 
 <h2>4. The Eight Categories</h2>
 <p>These are the only categories that exist. There is <strong>no Nationality category</strong>: nationality is sent straight through, because the D365 country region id is already the three character ISO code ADP expects.</p>
@@ -66,11 +70,11 @@
     <tr><th>Category</th><th>Type</th><th>Where it is used in the payload</th></tr>
     <tr><td>Static Value</td><td>Fixed key</td><td>Six CSPF fields and two identification lookups</td></tr>
     <tr><td>Funding Method</td><td>Fixed key</td><td>BANK record, funding method</td></tr>
-    <tr><td>Gender</td><td>Lookup</td><td>CSPF <code>GENDER</code></td></tr>
-    <tr><td>Marital Status</td><td>Lookup</td><td>CSPF <code>MARITAL STATUS</code></td></tr>
-    <tr><td>Type of Contract</td><td>Lookup</td><td>CSPF <code>TYPE OF CONTRACT</code></td></tr>
-    <tr><td>Full Time / Part Time</td><td>Lookup</td><td>CSPF <code>FULL TIME OR PART TIME</code></td></tr>
-    <tr><td>Pay Element Code</td><td>Mixed</td><td>PAYD records, base pay and variable compensation awards</td></tr>
+    <tr><td>Gender</td><td>Typed, no lookup</td><td>CSPF <code>GENDER</code></td></tr>
+    <tr><td>Marital Status</td><td>Typed, no lookup</td><td>CSPF <code>MARITAL STATUS</code></td></tr>
+    <tr><td>Type of Contract</td><td>Typed, no lookup</td><td>CSPF <code>TYPE OF CONTRACT</code></td></tr>
+    <tr><td>Full Time / Part Time</td><td>Typed, no lookup</td><td>CSPF <code>FULL TIME OR PART TIME</code></td></tr>
+    <tr><td>Pay Element Code</td><td>Fixed key + lookup</td><td>PAYD records, base pay and variable compensation awards</td></tr>
     <tr><td>Termination Reason</td><td>Lookup</td><td>CSPF <code>TERMINATION REASON</code></td></tr>
 </table>
 
@@ -95,8 +99,8 @@
     <tr><td><code>DEFAULT</code></td><td><span class="tbc">Awaiting customer</span></td><td>Open</td></tr>
 </table>
 
-<h3>5.3 Gender (lookup)</h3>
-<p class="src">Source: the D365 <code>HcmPersonGender</code> enum symbol name, read from Personal details.</p>
+<h3>5.3 Gender (typed, no lookup)</h3>
+<p class="src">Source: the D365 <code>HcmPersonGender</code> enum symbol name, read from Personal details. Type it by hand, exactly as below.</p>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
     <tr><td><code>Male</code></td><td><code>Male</code></td></tr>
@@ -104,8 +108,8 @@
     <tr><td><code>NonSpecific</code></td><td><em>(leave empty)</em></td></tr>
 </table>
 
-<h3>5.4 Marital Status (lookup)</h3>
-<p class="src">Source: the D365 <code>HcmPersonMaritalStatus</code> enum symbol name, read from Personal details.</p>
+<h3>5.4 Marital Status (typed, no lookup)</h3>
+<p class="src">Source: the D365 <code>HcmPersonMaritalStatus</code> enum symbol name, read from Personal details. Type it by hand, exactly as below.</p>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
     <tr><td><code>Single</code></td><td><code>Single</code></td></tr>
@@ -115,9 +119,9 @@
     <tr><td><code>CivilPartnership</code></td><td><code>Civil Union</code></td></tr>
     <tr><td><code>RegisteredPartnership</code></td><td><code>Civil Union</code></td></tr>
 </table>
-<p class="src">The form lookup is the authoritative list of source values. Add a row for every value in use.</p>
+<p class="src">Add a row for every value in use. The symbol names above are the enum element names, not the labels shown on the D365 form, and the two can differ by language.</p>
 
-<h3>5.5 Type of Contract (lookup)</h3>
+<h3>5.5 Type of Contract (typed, no lookup)</h3>
 <div class="note">The source is the <strong>Benefit employment type id</strong> on the worker's employment details, not the worker type. The worker type only distinguishes an employee from a contractor, which is too coarse to carry these values. Source values are therefore whatever benefit employment types are configured in D365, for example <code>Permanent</code> or <code>FixedTerm</code>.</div>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
@@ -125,7 +129,7 @@
     <tr><td><em>Benefit employment type id from D365</em></td><td>e.g. <code>Temporary with Fixed Term</code></td></tr>
 </table>
 
-<h3>5.6 Full Time / Part Time (lookup)</h3>
+<h3>5.6 Full Time / Part Time (typed, no lookup)</h3>
 <p>Same source field as Type of Contract, a different translation of the same value. A row is needed in <strong>both</strong> categories for each benefit employment type in use.</p>
 <table>
     <tr><th>Source value</th><th>Target value (example)</th></tr>
@@ -142,7 +146,7 @@
     <tr><td><code>FIXED_COMP</code></td><td><span class="tbc">Awaiting ADP</span></td><td><strong>The PAYD record is still sent</strong>, carrying the real salary amount and no pay element code. The validator raises a warning and transmission continues.</td></tr>
 </table>
 
-<p><strong>Variable compensation awards, by type.</strong> The source value is the <strong>variable compensation type id</strong> on the award's plan, not the plan id.</p>
+<p><strong>Variable compensation awards, by type.</strong> The source value is the <strong>variable compensation type id</strong> on the award's plan, not the plan id. This one does have a lookup: it lists the variable compensation plans and returns the <code>TypeId</code>, showing the plan id and description alongside so you can tell which plan you are looking at.</p>
 <table>
     <tr><th>Source value</th><th>Target value</th><th>If left empty</th></tr>
     <tr><td><em>Variable compensation type id from D365</em></td><td>e.g. <code>H10153</code></td><td><strong>The award is skipped entirely</strong>, no PAYD record is produced for it.</td></tr>
@@ -151,7 +155,7 @@
 <div class="note">Variable compensation <strong>enrolments</strong> are out of scope, confirmed with the functional team. The code exists but is not called, so enrolments never reach the payload regardless of what is configured here. Only <strong>awards</strong> are live.</div>
 
 <h3>5.8 Termination Reason (lookup)</h3>
-<p class="src">Source: the D365 reason code id on the employment's termination reason.</p>
+<p class="src">Source: the D365 reason code id on the employment's termination reason. The lookup lists reason codes and is filtered to those flagged as termination applicable, so a reason code that does not appear has that flag turned off in D365.</p>
 <table>
     <tr><th>Source value</th><th>Target value</th><th>Status</th></tr>
     <tr><td><em>Select from D365 reason codes</em></td><td><span class="tbc">Awaiting ADP</span></td><td>Open</td></tr>
@@ -191,7 +195,7 @@
     <li>Open Human resources &gt; Compensation &gt; Payroll integration &gt; Payroll ADP value mapping.</li>
     <li>Click New.</li>
     <li>Select the Category.</li>
-    <li>Enter the fixed key, or select the D365 value from the lookup.</li>
+    <li>Enter the Source value. Pay Element Code and Termination Reason offer a lookup. Everything else is typed by hand and is case sensitive.</li>
     <li>Enter the Target value.</li>
     <li>Save.</li>
 </ol>
